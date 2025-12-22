@@ -718,7 +718,12 @@ export default class CanvasManager {
       fileId = url.searchParams.get('id') || '';
     }
     if (!fileId) return [];
-    const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    const params = new URLSearchParams({ export: 'download', id: fileId });
+    const cacheBust = url.searchParams.get('v');
+    if (cacheBust) {
+      params.set('v', cacheBust);
+    }
+    const directUrl = `https://drive.google.com/uc?${params.toString()}`;
     const apiProxyUrl = `/api/proxy?url=${encodeURIComponent(directUrl)}`;
     const localProxyUrl = `/proxy?url=${encodeURIComponent(directUrl)}`;
     return [apiProxyUrl, localProxyUrl, directUrl];

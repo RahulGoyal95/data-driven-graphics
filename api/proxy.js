@@ -59,7 +59,14 @@ export default async function handler(req, res) {
   if (target.hostname.endsWith('drive.google.com') || target.hostname.endsWith('docs.google.com')) {
     const fileId = extractDriveId(target);
     if (fileId) {
-      target = new URL(`https://drive.google.com/uc?export=download&id=${fileId}`);
+      const cacheBust = target.searchParams.get('v');
+      const nextUrl = new URL('https://drive.google.com/uc');
+      nextUrl.searchParams.set('export', 'download');
+      nextUrl.searchParams.set('id', fileId);
+      if (cacheBust) {
+        nextUrl.searchParams.set('v', cacheBust);
+      }
+      target = nextUrl;
     }
   }
 
@@ -75,7 +82,7 @@ export default async function handler(req, res) {
     if (contentType) res.setHeader('Content-Type', contentType);
     const contentLength = response.headers.get('content-length');
     if (contentLength) res.setHeader('Content-Length', contentLength);
-    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800');
 
     const nodeStream = Readable.fromWeb(response.body);
     nodeStream.pipe(res);

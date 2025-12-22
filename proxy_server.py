@@ -77,11 +77,18 @@ class ProxyHandler(http.server.SimpleHTTPRequestHandler):
         if not file_id:
             query = urllib.parse.parse_qs(parsed.query)
             file_id = query.get("id", [""])[0]
+            cache_bust = query.get("v", [""])[0]
+        else:
+            query = urllib.parse.parse_qs(parsed.query)
+            cache_bust = query.get("v", [""])[0]
 
         if not file_id:
             return url
 
-        return f"https://drive.google.com/uc?export=download&id={file_id}"
+        params = {"export": "download", "id": file_id}
+        if cache_bust:
+            params["v"] = cache_bust
+        return f"https://drive.google.com/uc?{urllib.parse.urlencode(params)}"
 
 
 def run():
