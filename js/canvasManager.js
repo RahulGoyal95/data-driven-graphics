@@ -77,24 +77,52 @@ export default class CanvasManager {
   async setTemplate(src) {
     const image = await this.loadImage(src);
     this.dataManager.setTemplateSource(src);
-    this.stage.size({ width: image.width, height: image.height });
+
+    // Calculate scaled dimensions to fit within viewport
+    const { scaledWidth, scaledHeight, scale } = this.calculateFitToViewport(image.width, image.height);
+
+    // Store original dimensions and scale for export
+    this.originalTemplateWidth = image.width;
+    this.originalTemplateHeight = image.height;
+    this.templateScale = scale;
+
+    this.stage.size({ width: scaledWidth, height: scaledHeight });
+
     let templateNode = this.layer.findOne('#template-image');
     if (templateNode) {
       templateNode.image(image);
-      templateNode.setAttrs({ width: image.width, height: image.height });
+      templateNode.setAttrs({ width: scaledWidth, height: scaledHeight });
     } else {
       templateNode = new Konva.Image({
         id: 'template-image',
         listening: false,
         image,
-        width: image.width,
-        height: image.height,
+        width: scaledWidth,
+        height: scaledHeight,
       });
       this.layer.add(templateNode);
       templateNode.moveToBottom();
     }
     this.layer.draw();
     this.notifyRender();
+  }
+
+  calculateFitToViewport(imageWidth, imageHeight) {
+    // Get the canvas wrapper element to determine available space
+    const wrapper = document.getElementById('canvasWrapper');
+    const maxWidth = wrapper ? wrapper.clientWidth * 0.95 : 800;
+    const maxHeight = wrapper ? Math.min(wrapper.clientHeight, window.innerHeight * 0.7) : 600;
+
+    // Calculate scale to fit within viewport while maintaining aspect ratio
+    const scaleX = maxWidth / imageWidth;
+    const scaleY = maxHeight / imageHeight;
+    const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+
+    return {
+      scaledWidth: Math.round(imageWidth * scale),
+      scaledHeight: Math.round(imageHeight * scale),
+      scale
+    };
   }
 
   addTextElement() {
@@ -144,6 +172,9 @@ export default class CanvasManager {
       hAlign: 'center',
       vAlign: 'middle',
       textColor: '#111111',
+      fillType: 'solid',
+      gradientStart: '#111111',
+      gradientEnd: '#aaaaaa',
     });
     this.layer.draw();
     this.notifyRender();
@@ -279,16 +310,22 @@ export default class CanvasManager {
   }
 
   async renderCanvas(rowIndex) {
-    if (!this.stage || !this.dataManager.getRowCount()) return;
-    if (rowIndex < 0) rowIndex = 0;
-    if (rowIndex >= this.dataManager.getRowCount()) rowIndex = this.dataManager.getRowCount() - 1;
-    this.currentRow = rowIndex;
-    await this.populateStageWithRow(this.stage, rowIndex);
+    if (!this.stage) return;
+
+    // If no data loaded, still render with placeholder/default values
+    const hasData = this.dataManager.getRowCount() > 0;
+    if (hasData) {
+      if (rowIndex < 0) rowIndex = 0;
+      if (rowIndex >= this.dataManager.getRowCount()) rowIndex = this.dataManager.getRowCount() - 1;
+    }
+    this.currentRow = hasData ? rowIndex : 0;
+
+    await this.populateStageWithRow(this.stage, this.currentRow, !hasData);
     this.layer.draw();
     this.notifyRender();
   }
 
-  async populateStageWithRow(stage, rowIndex) {
+  async populateStageWithRow(stage, rowIndex, previewMode = false) {
     const row = this.dataManager.getRow(rowIndex) || {};
     const promises = [];
     stage.find('.canvas-element').forEach((group) => {
@@ -298,7 +335,12 @@ export default class CanvasManager {
       if (type === 'text') {
         const textNode = group.findOne('.text-node');
         const rect = group.findOne('.bounding-box');
-        const displayValue = mapping ? row[mapping] || '' : 'Map a column';
+        let displayValue;
+        if (previewMode) {
+          displayValue = 'Sample Text';
+        } else {
+          displayValue = mapping ? row[mapping] || '' : 'Map a column';
+        }
         this.applyTextContent(textNode, rect, displayValue, meta);
         return;
       }
@@ -311,8 +353,8 @@ export default class CanvasManager {
             ? this.dataManager.getOverlay(rowIndex)
             : row[mapping]
           : null;
-        const src = this.normalizeImageSource(rawSrc);
-        if (!src) {
+        const sources = this.normalizeImageSource(rawSrc);
+        if (!sources.length) {
           if (imageNode) {
             imageNode.image(null);
             imageNode.width(rect?.width() || imageNode.width());
@@ -325,7 +367,7 @@ export default class CanvasManager {
         }
         if (placeholder) placeholder.visible(false);
         promises.push(
-          this.applyImageToNode(imageNode, rect, src, meta).then((loaded) => {
+          this.applyImageToNode(imageNode, rect, sources, meta).then((loaded) => {
             if (placeholder) placeholder.visible(!loaded);
           })
         );
@@ -347,6 +389,7 @@ export default class CanvasManager {
       textNode.text(content);
       textNode.fontFamily(fontFamily);
       textNode.fontSize(fontSize);
+      textNode.fontStyle(meta.fontWeight ? String(meta.fontWeight) : 'normal');
       textNode.width(width);
       textNode.height(height);
       textNode.lineHeight(1.2);
@@ -355,7 +398,8 @@ export default class CanvasManager {
       textNode.x(0);
       const offset = this.calculateVerticalOffset(height, measured, meta.vAlign);
       textNode.y(offset);
-      textNode.fill(meta.textColor || '#111111');
+      textNode.y(offset);
+      this.applyTextFill(textNode, meta, height);
       return;
     }
     this.fitTextToBox(textNode, content, width, height, meta);
@@ -377,6 +421,7 @@ export default class CanvasManager {
     textNode.text(content);
     textNode.fontFamily(fontFamily);
     textNode.fontSize(fontSize);
+    textNode.fontStyle(meta.fontWeight ? String(meta.fontWeight) : 'normal');
     textNode.width(width);
     textNode.height(height);
     textNode.lineHeight(1.2);
@@ -385,7 +430,25 @@ export default class CanvasManager {
     textNode.x(0);
     const offset = this.calculateVerticalOffset(height, measured, meta.vAlign);
     textNode.y(offset);
-    textNode.fill(meta.textColor || '#111111');
+    textNode.y(offset);
+    this.applyTextFill(textNode, meta, height);
+  }
+
+  applyTextFill(textNode, meta, height) {
+    if (meta.fillType === 'gradient') {
+      textNode.fillPriority('linear-gradient');
+      textNode.fillLinearGradientStartPoint({ x: 0, y: 0 });
+      textNode.fillLinearGradientEndPoint({ x: 0, y: height });
+      textNode.fillLinearGradientColorStops([
+        0,
+        meta.gradientStart || '#111111',
+        1,
+        meta.gradientEnd || '#aaaaaa',
+      ]);
+    } else {
+      textNode.fillPriority('color');
+      textNode.fill(meta.textColor || '#111111');
+    }
   }
 
   measureMultilineHeight(text, fontSize, width, fontFamily = 'Inter') {
@@ -433,22 +496,34 @@ export default class CanvasManager {
     return (container - content) / 2;
   }
 
-  applyImageToNode(node, rect, src, meta = {}) {
-    if (!node || !src) {
+  applyImageToNode(node, rect, sources, meta = {}) {
+    const candidates = Array.isArray(sources)
+      ? sources.filter(Boolean)
+      : [sources].filter(Boolean);
+    if (!node || candidates.length === 0) {
       node?.image(null);
       return Promise.resolve(false);
     }
     return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        this.drawImageWithFit(node, rect, img, meta);
-        node.getLayer()?.batchDraw();
-        this.notifyRender();
-        resolve(true);
+      const tryLoad = (index) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          this.drawImageWithFit(node, rect, img, meta);
+          node.getLayer()?.batchDraw();
+          this.notifyRender();
+          resolve(true);
+        };
+        img.onerror = () => {
+          if (index + 1 < candidates.length) {
+            tryLoad(index + 1);
+          } else {
+            resolve(false);
+          }
+        };
+        img.src = candidates[index];
       };
-      img.onerror = () => resolve(false);
-      img.src = src;
+      tryLoad(0);
     });
   }
 
@@ -484,7 +559,14 @@ export default class CanvasManager {
     if (!this.stage) return null;
     const { stage, container } = this.createOffscreenStage();
     await this.populateStageWithRow(stage, rowIndex);
-    const canvas = stage.toCanvas({ pixelRatio: 1 });
+
+    // Hide all bounding boxes and placeholders before export
+    stage.find('.bounding-box').forEach((node) => node.visible(false));
+    stage.find('.image-placeholder').forEach((node) => node.visible(false));
+
+    // Use inverse of templateScale to export at original resolution
+    const exportPixelRatio = this.templateScale ? (1 / this.templateScale) : 1;
+    const canvas = stage.toCanvas({ pixelRatio: exportPixelRatio });
     const blob = await new Promise((resolve) => canvas.toBlob(resolve));
     stage.destroy();
     container.remove();
@@ -509,6 +591,13 @@ export default class CanvasManager {
     this.layer.getChildren().forEach((child) => {
       if (child === this.transformer) return;
       const clone = child.clone({ listening: false });
+      // Hide bounding boxes and placeholders for export (only for Groups)
+      if (typeof clone.findOne === 'function') {
+        const boundingBox = clone.findOne('.bounding-box');
+        if (boundingBox) boundingBox.visible(false);
+        const placeholder = clone.findOne('.image-placeholder');
+        if (placeholder) placeholder.visible(false);
+      }
       layer.add(clone);
     });
     layer.draw();
@@ -592,30 +681,74 @@ export default class CanvasManager {
   }
 
   normalizeImageSource(value) {
-    if (!value) return null;
+    if (!value) return [];
     const src = String(value).trim();
-    if (!src) return null;
-    if (/^data:image\//i.test(src)) return src;
-    if (/^(https?:|blob:)/i.test(src)) return src;
+    if (!src) return [];
+    if (/^data:image\//i.test(src)) return [src];
+    if (/^\/?proxy\?url=/i.test(src)) return [src];
+    const driveSources = this.normalizeGoogleDriveUrl(src);
+    if (driveSources.length) return driveSources;
+    if (/^(https?:|blob:)/i.test(src)) return [src];
     const hasExtension = /\.[a-z0-9]{2,4}(\?.*)?$/i.test(src);
-    if (/^([./]|..\/)/.test(src) && hasExtension) return src;
-    if (hasExtension) return src;
-    return null;
+    if (/^([./]|..\/)/.test(src) && hasExtension) return [src];
+    if (hasExtension) return [src];
+    return [];
+  }
+
+  normalizeGoogleDriveUrl(src) {
+    let url;
+    try {
+      url = new URL(src);
+    } catch (error) {
+      return [];
+    }
+    const host = url.hostname.toLowerCase();
+    if (!host.endsWith('drive.google.com') && !host.endsWith('docs.google.com')) {
+      return [];
+    }
+    let fileId = '';
+    if (url.pathname.includes('/file/d/')) {
+      const parts = url.pathname.split('/');
+      const index = parts.indexOf('d');
+      if (index !== -1 && parts[index + 1]) {
+        fileId = parts[index + 1];
+      }
+    }
+    if (!fileId && url.searchParams.has('id')) {
+      fileId = url.searchParams.get('id') || '';
+    }
+    if (!fileId) return [];
+    const directUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    const apiProxyUrl = `/api/proxy?url=${encodeURIComponent(directUrl)}`;
+    const localProxyUrl = `/proxy?url=${encodeURIComponent(directUrl)}`;
+    return [apiProxyUrl, localProxyUrl, directUrl];
   }
 
   ensureFontLoaded(fontFamily) {
-    if (!fontFamily || typeof document === 'undefined' || !document.fonts) return;
+    if (!fontFamily || typeof document === 'undefined') return;
     if (this.loadedFonts.has(fontFamily) || this.loadingFonts.has(fontFamily)) return;
+
+    // Check if it's a standard web font (simplified check)
+    const webSafe = ['Arial', 'Verdana', 'Helvetica', 'Times New Roman', 'Courier New', 'Georgia', 'serif', 'sans-serif'];
+    if (webSafe.includes(fontFamily)) return;
+
     this.loadingFonts.add(fontFamily);
-    document.fonts
-      .load(`16px "${fontFamily}"`)
-      .then(() => {
-        this.loadedFonts.add(fontFamily);
-        this.loadingFonts.delete(fontFamily);
-        this.renderCanvas(this.currentRow);
-      })
-      .catch(() => {
-        this.loadingFonts.delete(fontFamily);
-      });
+
+    const self = this;
+    WebFont.load({
+      google: {
+        // Load common font weights for flexibility
+        families: [`${fontFamily}:100,200,300,400,500,600,700,800,900`]
+      },
+      fontactive: function (familyName) {
+        self.loadedFonts.add(familyName);
+        self.loadingFonts.delete(familyName);
+        self.renderCanvas(self.currentRow);
+      },
+      fontinactive: function (familyName) {
+        console.warn(`Font ${familyName} failed to load or is not available.`);
+        self.loadingFonts.delete(familyName);
+      }
+    });
   }
 }

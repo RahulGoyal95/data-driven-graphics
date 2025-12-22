@@ -1,219 +1,265 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Data-Driven Graphics Generator</title>
-    <link rel="stylesheet" href="styles.css" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Roboto:wght@400;500;700&family=Lato:wght@400;700&family=Poppins:wght@400;600&family=Space+Grotesk:wght@400;600&display=swap"
-      rel="stylesheet"
-    />
-  </head>
-  <body>
-    <header class="app-header">
-      <div>
-        <h1>Data-Driven Graphics Generator</h1>
-        <p>Create batch-ready graphics from CSV data and templates.</p>
-      </div>
-      <button id="themeToggle" class="ghost-button" aria-label="Toggle theme">
-        Toggle Dark Mode
-      </button>
-    </header>
 
-    <main>
-      <div class="view-switcher">
-        <button class="view-button active" data-view="design">Design View</button>
-        <button class="view-button" data-view="data">Data View</button>
-      </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data-Driven Graphics Generator</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Roboto:wght@400;500;700&family=Lato:wght@400;700&family=Poppins:wght@400;600&family=Space+Grotesk:wght@400;600&family=Oswald:wght@400;600&family=Playfair+Display:wght@400;600&family=Montserrat:wght@400;600&family=Raleway:wght@400;600&family=Merriweather:wght@400;700&family=Nunito:wght@400;600&family=Ubuntu:wght@400;500&display=swap"
+    rel="stylesheet" />
+</head>
 
-      <div id="designView" class="view-panel active app-layout">
-        <section class="panel left-panel">
-          <div class="card">
-            <h2>Assets</h2>
-            <label class="file-field">
-              <span>1. Upload Template</span>
-              <input type="file" id="templateInput" accept="image/*" />
-            </label>
-            <p class="helper-text">Switch to Data View to upload CSV data and manage mappings.</p>
+<body>
+  <header class="app-header">
+    <div>
+      <h1>Data-Driven Graphics Generator</h1>
+      <p>Create batch-ready graphics from CSV data and templates.</p>
+    </div>
+    <button id="themeToggle" class="ghost-button" aria-label="Toggle theme">
+      Toggle Dark Mode
+    </button>
+  </header>
+
+  <main>
+    <div class="view-switcher">
+      <button class="view-button active" data-view="design">Design View</button>
+      <button class="view-button" data-view="data">Data View</button>
+    </div>
+
+    <div id="designView" class="view-panel active app-layout">
+      <section class="panel left-panel">
+        <div class="card">
+          <h2>Assets</h2>
+          <label class="file-field">
+            <span>1. Upload Template</span>
+            <input type="file" id="templateInput" accept="image/*" />
+          </label>
+          <p class="helper-text">Switch to Data View to upload CSV data and manage mappings.</p>
+        </div>
+
+        <div id="propertiesPanel" class="card properties-panel hidden">
+          <div class="card-header">
+            <h2>Layer Properties</h2>
+            <small id="selectedElementLabel">No element selected</small>
           </div>
-
-          <div id="propertiesPanel" class="card properties-panel hidden">
-            <div class="card-header">
-              <h2>Layer Properties</h2>
-              <small id="selectedElementLabel">No element selected</small>
-            </div>
-            <p class="helper-text">
-              Map elements to CSV columns from the Data View. Adjust typography and image behavior here.
-            </p>
-            <div class="properties-body">
-              <div id="textProperties" class="properties-section hidden">
-                <h3>Text Options</h3>
-                <div class="property-grid">
-                  <label class="dropdown-field">
-                    <span>Font Family</span>
-                    <select id="textFontFamily">
-                      <option value="Inter">Inter</option>
-                      <option value="Roboto">Roboto</option>
-                      <option value="Lato">Lato</option>
-                      <option value="Poppins">Poppins</option>
-                      <option value="Space Grotesk">Space Grotesk</option>
-                    </select>
-                  </label>
-                  <label class="dropdown-field">
-                    <span>Base Font Size</span>
-                    <input type="number" id="textFontSize" min="8" max="120" step="1" value="28" />
-                  </label>
-                </div>
-                <label class="checkbox-field">
-                  <input type="checkbox" id="textAutoFit" checked />
-                  <span>Auto-fit text to bounding box</span>
+          <p class="helper-text">
+            Map elements to CSV columns from the Data View. Adjust typography and image behavior here.
+          </p>
+          <div class="properties-body">
+            <div id="textProperties" class="properties-section hidden">
+              <h3>Text Options</h3>
+              <div class="property-grid">
+                <label class="dropdown-field" style="overflow: visible;">
+                  <span>Font Family</span>
+                  <div class="custom-select-wrapper" id="fontSelectWrapper">
+                    <div class="custom-select-trigger" id="fontSelectTrigger">
+                      <span id="currentFontLabel">Inter</span>
+                      <span class="arrow">▼</span>
+                    </div>
+                    <div class="custom-options hidden" id="fontOptionsPanel">
+                      <input type="text" id="fontSearch" placeholder="Search fonts..." autocomplete="off">
+                      <ul id="fontOptionsList"></ul>
+                    </div>
+                  </div>
                 </label>
-                <div class="property-grid">
-                  <label class="dropdown-field">
-                    <span>Horizontal Align</span>
-                    <select id="textAlignX">
-                      <option value="left">Left</option>
-                      <option value="center" selected>Center</option>
-                      <option value="right">Right</option>
-                    </select>
-                  </label>
-                  <label class="dropdown-field">
-                    <span>Vertical Align</span>
-                    <select id="textAlignY">
-                      <option value="top">Top</option>
-                      <option value="middle" selected>Middle</option>
-                      <option value="bottom">Bottom</option>
-                    </select>
-                  </label>
-                  <label class="dropdown-field">
-                    <span>Font Color</span>
-                    <input type="color" id="textColorPicker" value="#111111" />
-                  </label>
-                </div>
-              </div>
-
-              <div id="imageProperties" class="properties-section hidden">
-                <h3>Image Options</h3>
                 <label class="dropdown-field">
-                  <span>Fit Behavior</span>
-                  <select id="imageFitMode">
-                    <option value="fill">Stretch to bounds</option>
-                    <option value="fit">Fit inside (contain)</option>
-                    <option value="cover">Fill & crop (cover)</option>
+                  <span>Base Font Size</span>
+                  <input type="number" id="textFontSize" min="8" max="120" step="1" value="28" />
+                </label>
+                <label class="dropdown-field">
+                  <span>Font Weight</span>
+                  <select id="textFontWeight">
+                    <option value="100">Thin</option>
+                    <option value="200">ExtraLight</option>
+                    <option value="300">Light</option>
+                    <option value="400" selected>Regular</option>
+                    <option value="500">Medium</option>
+                    <option value="600">SemiBold</option>
+                    <option value="700">Bold</option>
+                    <option value="800">ExtraBold</option>
+                    <option value="900">Black</option>
                   </select>
                 </label>
-                <div class="property-grid">
-                  <label class="dropdown-field">
-                    <span>Horizontal Align</span>
-                    <select id="imageAlignX">
-                      <option value="left">Left</option>
-                      <option value="center" selected>Center</option>
-                      <option value="right">Right</option>
-                    </select>
-                  </label>
-                  <label class="dropdown-field">
-                    <span>Vertical Align</span>
-                    <select id="imageAlignY">
-                      <option value="top">Top</option>
-                      <option value="middle" selected>Middle</option>
-                      <option value="bottom">Bottom</option>
-                    </select>
-                  </label>
-                </div>
+              </div>
+              <label class="checkbox-field">
+                <input type="checkbox" id="textAutoFit" checked />
+                <span>Auto-fit text to bounding box</span>
+              </label>
+              <div class="property-grid">
+                <label class="dropdown-field">
+                  <span>Horizontal Align</span>
+                  <select id="textAlignX">
+                    <option value="left">Left</option>
+                    <option value="center" selected>Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </label>
+                <label class="dropdown-field">
+                  <span>Vertical Align</span>
+                  <select id="textAlignY">
+                    <option value="top">Top</option>
+                    <option value="middle" selected>Middle</option>
+                    <option value="bottom">Bottom</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="property-grid" style="grid-template-columns: 1fr 1fr; margin-top: 12px; align-items: end;">
+                <label class="dropdown-field">
+                  <span>Fill Type</span>
+                  <select id="textFillType">
+                    <option value="solid" selected>Solid Color</option>
+                    <option value="gradient">Gradient</option>
+                  </select>
+                </label>
+
+                <label class="dropdown-field" id="solidColorField">
+                  <span>Color</span>
+                  <input type="color" id="textColorPicker" value="#111111" />
+                </label>
+              </div>
+
+              <div id="gradientColorsField" class="property-grid hidden"
+                style="grid-template-columns: 1fr 1fr; margin-top: 8px;">
+                <label class="dropdown-field">
+                  <span>Start Color</span>
+                  <input type="color" id="textGradientStart" value="#111111" />
+                </label>
+                <label class="dropdown-field">
+                  <span>End Color</span>
+                  <input type="color" id="textGradientEnd" value="#aaaaaa" />
+                </label>
+              </div>
+            </div>
+
+            <div id="imageProperties" class="properties-section hidden">
+              <h3>Image Options</h3>
+              <label class="dropdown-field">
+                <span>Fit Behavior</span>
+                <select id="imageFitMode">
+                  <option value="fill">Stretch to bounds</option>
+                  <option value="fit">Fit inside (contain)</option>
+                  <option value="cover">Fill & crop (cover)</option>
+                </select>
+              </label>
+              <div class="property-grid">
+                <label class="dropdown-field">
+                  <span>Horizontal Align</span>
+                  <select id="imageAlignX">
+                    <option value="left">Left</option>
+                    <option value="center" selected>Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </label>
+                <label class="dropdown-field">
+                  <span>Vertical Align</span>
+                  <select id="imageAlignY">
+                    <option value="top">Top</option>
+                    <option value="middle" selected>Middle</option>
+                    <option value="bottom">Bottom</option>
+                  </select>
+                </label>
               </div>
             </div>
           </div>
+        </div>
 
-          <div class="card layers-card">
-            <div class="card-header">
-              <h2>Layers</h2>
-              <small>Reorder visually by dragging on canvas. Toggle visibility/locking here.</small>
-            </div>
-            <div id="layersList" class="layer-list layers-panel empty-state">
-              <p>Add elements to see the layer stack.</p>
-            </div>
+        <div class="card layers-card">
+          <div class="card-header">
+            <h2>Layers</h2>
+            <small>Reorder visually by dragging on canvas. Toggle visibility/locking here.</small>
           </div>
-        </section>
-
-        <section class="panel right-panel">
-          <div class="card">
-            <div class="canvas-toolbar">
-              <div class="button-group">
-                <button id="addTextBtn" class="primary-button" disabled>Add Text Area</button>
-                <button id="addImageBtn" class="secondary-button" disabled>
-                  Add Image Placeholder
-                </button>
-              </div>
-              <div class="preview-controls">
-                <button id="prevRow" class="ghost-button" disabled>&larr; Previous</button>
-                <span id="previewStatus">Previewing Row 0/0</span>
-                <button id="nextRow" class="ghost-button" disabled>Next &rarr;</button>
-              </div>
-            </div>
-            <div id="canvasWrapper" class="canvas-wrapper">
-              <div id="canvasContainer" class="canvas-container"></div>
-            </div>
+          <div id="layersList" class="layer-list layers-panel empty-state">
+            <p>Add elements to see the layer stack.</p>
           </div>
+        </div>
+      </section>
 
-          <div class="card export-card">
-            <div class="export-actions">
-              <button id="exportAll" class="primary-button" disabled>
-                Download All as ZIP
+      <section class="panel right-panel">
+        <div class="card">
+          <div class="canvas-toolbar">
+            <div class="button-group">
+              <button id="addTextBtn" class="primary-button" disabled>Add Text Area</button>
+              <button id="addImageBtn" class="secondary-button" disabled>
+                Add Image Placeholder
               </button>
-              <span id="exportStatus" class="export-status" aria-live="polite"></span>
+            </div>
+            <div class="preview-controls">
+              <button id="prevRow" class="ghost-button" disabled>&larr; Previous</button>
+              <span id="previewStatus">Previewing Row 0/0</span>
+              <button id="nextRow" class="ghost-button" disabled>Next &rarr;</button>
             </div>
           </div>
-        </section>
-      </div>
-
-      <div id="dataView" class="view-panel">
-        <section class="panel data-panel">
-          <div class="card">
-            <h2>Dataset</h2>
-            <label class="file-field">
-              <span>Upload CSV</span>
-              <input type="file" id="csvInput" accept=".csv" />
-            </label>
-            <p class="helper-text">
-              Edits are saved automatically. Use the mapping controls below to assign columns to layers.
-            </p>
+          <div id="canvasWrapper" class="canvas-wrapper">
+            <div id="canvasContainer" class="canvas-container"></div>
           </div>
+        </div>
 
-          <div class="card">
-            <div class="card-header">
-              <h2>Data Table</h2>
-              <small>Edit directly, changes auto-save.</small>
-            </div>
-            <div id="tableContainer" class="table-container empty-state">
-              <p>Upload a CSV to see rows here.</p>
-            </div>
+        <div class="card export-card">
+          <div class="export-actions">
+            <button id="exportAll" class="primary-button" disabled>
+              Download All as ZIP
+            </button>
+            <span id="exportStatus" class="export-status" aria-live="polite"></span>
           </div>
+        </div>
+      </section>
+    </div>
 
-          <div class="card">
-            <div class="card-header">
-              <h2>Layer Mappings</h2>
-              <small>Select which column powers each element.</small>
-            </div>
-            <div id="dataPreview" class="data-preview">
-              <canvas id="dataPreviewCanvas" width="360" height="220"></canvas>
-              <small>Live preview of template & mapped data.</small>
-            </div>
-            <div id="layerMappings" class="layer-list empty-state">
-              <p>Add elements on the Design View to map them to data columns.</p>
-            </div>
+    <div id="dataView" class="view-panel">
+      <section class="panel data-panel">
+        <div class="card">
+          <h2>Dataset</h2>
+          <label class="file-field">
+            <span>Upload CSV</span>
+            <input type="file" id="csvInput" accept=".csv" />
+          </label>
+          <p class="helper-text">
+            Edits are saved automatically. Use the mapping controls below to assign columns to layers.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Data Table</h2>
+            <small>Edit directly, changes auto-save.</small>
           </div>
-        </section>
-      </div>
-    </main>
+          <div id="tableContainer" class="table-container empty-state">
+            <p>Upload a CSV to see rows here.</p>
+          </div>
+        </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://unpkg.com/konva@9.3.0/konva.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js" crossorigin="anonymous"></script>
-    <script type="module" src="js/main.js"></script>
-  </body>
+        <div class="card">
+          <div class="card-header">
+            <h2>Layer Mappings</h2>
+            <small>Select which column powers each element.</small>
+          </div>
+          <div id="dataPreview" class="data-preview">
+            <canvas id="dataPreviewCanvas" width="360" height="220"></canvas>
+            <small>Live preview of template & mapped data.</small>
+          </div>
+          <div id="layerMappings" class="layer-list empty-state">
+            <p>Add elements on the Design View to map them to data columns.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://unpkg.com/konva@9.3.0/konva.min.js" crossorigin="anonymous"
+    referrerpolicy="no-referrer"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/webfont/1.6.26/webfont.js" crossorigin="anonymous"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+
 </html>

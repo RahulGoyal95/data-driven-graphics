@@ -1,4 +1,5 @@
 import { OVERLAY_KEY } from './canvasManager.js';
+import { googleFonts } from './googleFontsList.js';
 
 export default class UIManager {
   constructor(dataManager, canvasManager) {
@@ -9,7 +10,10 @@ export default class UIManager {
     this.currentSelection = null;
     this.isSyncingProperties = false;
     this.dragLayerId = null;
+    this.dragLayerId = null;
     this.currentLayerDisplayOrder = [];
+    this.fonts = googleFonts;
+    this.isFontDropdownOpen = false;
   }
 
   init() {
@@ -44,8 +48,15 @@ export default class UIManager {
     this.dom.dataPreviewCanvas = document.getElementById('dataPreviewCanvas');
     this.dom.textProperties = document.getElementById('textProperties');
     this.dom.imageProperties = document.getElementById('imageProperties');
-    this.dom.textFontFamily = document.getElementById('textFontFamily');
+    this.dom.imageProperties = document.getElementById('imageProperties');
+    this.dom.fontSelectWrapper = document.getElementById('fontSelectWrapper');
+    this.dom.fontSelectTrigger = document.getElementById('fontSelectTrigger');
+    this.dom.fontOptionsPanel = document.getElementById('fontOptionsPanel');
+    this.dom.fontSearch = document.getElementById('fontSearch');
+    this.dom.fontOptionsList = document.getElementById('fontOptionsList');
+    this.dom.currentFontLabel = document.getElementById('currentFontLabel');
     this.dom.textFontSize = document.getElementById('textFontSize');
+    this.dom.textFontWeight = document.getElementById('textFontWeight');
     this.dom.textAutoFit = document.getElementById('textAutoFit');
     this.dom.textAlignX = document.getElementById('textAlignX');
     this.dom.textAlignY = document.getElementById('textAlignY');
@@ -53,6 +64,11 @@ export default class UIManager {
     this.dom.imageFitMode = document.getElementById('imageFitMode');
     this.dom.imageAlignX = document.getElementById('imageAlignX');
     this.dom.imageAlignY = document.getElementById('imageAlignY');
+    this.dom.textFillType = document.getElementById('textFillType');
+    this.dom.solidColorField = document.getElementById('solidColorField');
+    this.dom.gradientColorsField = document.getElementById('gradientColorsField');
+    this.dom.textGradientStart = document.getElementById('textGradientStart');
+    this.dom.textGradientEnd = document.getElementById('textGradientEnd');
   }
 
   bindEvents() {
@@ -75,15 +91,30 @@ export default class UIManager {
     this.dom.viewButtons.forEach((button) => {
       button.addEventListener('click', () => this.switchView(button.dataset.view));
     });
-    this.dom.textFontFamily.addEventListener('change', () =>
-      this.handleTextMetaChange('fontFamily', this.dom.textFontFamily.value)
-    );
+    this.dom.viewButtons.forEach((button) => {
+      button.addEventListener('click', () => this.switchView(button.dataset.view));
+    });
+
+    // Font Dropdown Events
+    this.dom.fontSelectTrigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleFontDropdown();
+    });
+    this.dom.fontSearch.addEventListener('input', (e) => this.filterFonts(e.target.value));
+    this.dom.fontSearch.addEventListener('click', (e) => e.stopPropagation());
+    document.addEventListener('click', () => this.closeFontDropdown());
+
+    // Initial Font List Populate
+    this.populateFontList();
     this.dom.textFontSize.addEventListener('change', () => {
       const size = Number(this.dom.textFontSize.value) || 16;
       this.handleTextMetaChange('fontSize', Math.max(8, size));
     });
     this.dom.textAutoFit.addEventListener('change', () =>
       this.handleTextMetaChange('autoFit', this.dom.textAutoFit.checked)
+    );
+    this.dom.textFontWeight.addEventListener('change', () =>
+      this.handleTextMetaChange('fontWeight', Number(this.dom.textFontWeight.value))
     );
     this.dom.textAlignX.addEventListener('change', () =>
       this.handleTextMetaChange('hAlign', this.dom.textAlignX.value)
@@ -102,6 +133,17 @@ export default class UIManager {
     );
     this.dom.imageAlignY.addEventListener('change', () =>
       this.handleImageMetaChange('vAlign', this.dom.imageAlignY.value)
+    );
+    this.dom.textFillType.addEventListener('change', () => {
+      const fillType = this.dom.textFillType.value;
+      this.toggleGradientFields(fillType === 'gradient');
+      this.handleTextMetaChange('fillType', fillType);
+    });
+    this.dom.textGradientStart.addEventListener('input', () =>
+      this.handleTextMetaChange('gradientStart', this.dom.textGradientStart.value)
+    );
+    this.dom.textGradientEnd.addEventListener('input', () =>
+      this.handleTextMetaChange('gradientEnd', this.dom.textGradientEnd.value)
     );
   }
 
@@ -551,13 +593,27 @@ export default class UIManager {
     if (selection?.type === 'text') {
       this.dom.textProperties.classList.remove('hidden');
       this.dom.imageProperties.classList.add('hidden');
-      this.dom.textFontFamily.value = meta.fontFamily || 'Inter';
+
+      const currentFont = meta.fontFamily || 'Inter';
+      this.dom.currentFontLabel.textContent = currentFont;
+      this.dom.currentFontLabel.style.fontFamily = `"${currentFont}", sans-serif`;
+
+      // Update selected state in list if open, or just for next open
+      // We can lazily update the list highlighting when opened, but for now let's just leave it.
+
       this.dom.textFontSize.value = meta.fontSize || 28;
+      this.dom.textFontWeight.value = meta.fontWeight || 400;
       this.dom.textAutoFit.checked = meta.autoFit !== false;
       this.dom.textAlignX.value = meta.hAlign || 'center';
       this.dom.textAlignY.value = meta.vAlign || 'middle';
       this.dom.textColor.value = meta.textColor || '#111111';
+      this.dom.textFillType.value = meta.fillType || 'solid';
+      this.dom.textGradientStart.value = meta.gradientStart || '#111111';
+      this.dom.textGradientEnd.value = meta.gradientEnd || '#aaaaaa';
+      this.toggleGradientFields(meta.fillType === 'gradient');
     } else if (selection?.type === 'image') {
+      this.dom.imageProperties.classList.remove('hidden');
+      this.dom.textProperties.classList.add('hidden');
       this.dom.imageProperties.classList.remove('hidden');
       this.dom.textProperties.classList.add('hidden');
       this.dom.imageFitMode.value = meta.fitMode || 'fill';
@@ -568,6 +624,69 @@ export default class UIManager {
       this.dom.imageProperties.classList.add('hidden');
     }
     this.isSyncingProperties = false;
+  }
+
+  toggleFontDropdown() {
+    this.isFontDropdownOpen = !this.isFontDropdownOpen;
+    if (this.isFontDropdownOpen) {
+      this.dom.fontSelectWrapper.classList.add('open');
+      this.dom.fontOptionsPanel.classList.remove('hidden');
+      this.dom.fontSearch.focus();
+    } else {
+      this.closeFontDropdown();
+    }
+  }
+
+  closeFontDropdown() {
+    this.isFontDropdownOpen = false;
+    this.dom.fontSelectWrapper.classList.remove('open');
+    this.dom.fontOptionsPanel.classList.add('hidden');
+    this.dom.fontSearch.value = '';
+    this.filterFonts('');
+  }
+
+  populateFontList() {
+    this.renderFontOptions(this.fonts);
+  }
+
+  filterFonts(query) {
+    const lowerQuery = query.toLowerCase();
+    const filtered = this.fonts.filter(font => font.toLowerCase().includes(lowerQuery));
+    this.renderFontOptions(filtered);
+  }
+
+  renderFontOptions(fontList) {
+    this.dom.fontOptionsList.innerHTML = '';
+    fontList.forEach(font => {
+      const li = document.createElement('li');
+      li.textContent = font;
+      li.style.fontFamily = `"${font}", sans-serif`;
+      if (this.currentSelection) {
+        const meta = this.dataManager.getElementMeta(this.currentSelection.id) || {};
+        if (meta.fontFamily === font) {
+          li.classList.add('selected');
+        }
+      }
+      li.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.handleTextMetaChange('fontFamily', font);
+        // Update the font selector trigger to show the selected font
+        this.dom.currentFontLabel.textContent = font;
+        this.dom.currentFontLabel.style.fontFamily = `"${font}", sans-serif`;
+        this.closeFontDropdown();
+      });
+      this.dom.fontOptionsList.appendChild(li);
+    });
+  }
+
+  toggleGradientFields(isGradient) {
+    if (isGradient) {
+      this.dom.solidColorField.classList.add('hidden');
+      this.dom.gradientColorsField.classList.remove('hidden');
+    } else {
+      this.dom.solidColorField.classList.remove('hidden');
+      this.dom.gradientColorsField.classList.add('hidden');
+    }
   }
 
   buildCSVWithOverlays(rows) {

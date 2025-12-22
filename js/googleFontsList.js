@@ -1,0 +1,22 @@
+export const googleFonts = [
+    "Roboto", "Open Sans", "Noto Sans JP", "Montserrat", "Lato", "Poppins",
+    "Roboto Condensed", "Inter", "Roboto Mono", "Oswald", "Raleway", "Nunito",
+    "Ubuntu", "Merriweather", "Rubik", "Playfair Display", "Nunito Sans",
+    "Work Sans", "Lora", "Fira Sans", "Barlow", "Quicksand", "Mulish",
+    "PT Sans", "Kanit", "Hind Siliguri", "Heebo", "Titillium Web", "DM Sans",
+    "Inconsolata", "Mukta", "Oxygen", "IBM Plex Sans", "Arimo", "PT Serif",
+    "Karla", "Josefin Sans", "Dosis", "Libre Franklin", "Manrope", "Nanum Gothic",
+    "Bitter", "Libre Baskerville", "Anton", "Cabin", "Cairo", "Crimson Text",
+    "Source Code Pro", "PT Sans Narrow", "Bebas Neue", "Varela Round", "Outfit",
+    "Signika Negative", "Abel", "Fjalla One", "Exo 2", "Prompt", "Space Grotesk",
+    "Maven Pro", "Asap", "Teko", "Assistant", "Overpass", "Hind", "Cinzel",
+    "Shadows Into Light", "Merriweather Sans", "Yanone Kaffeesatz", "Arvo",
+    "Public Sans", "Barlow Condensed", "Questrial", "Slabo 27px", "Pacifico",
+    "Catamaran", "Cormorant Garamond", "Indie Flower", "Muli", "Signika",
+    "Zilla Slab", "Exo", "Red Hat Display", "Orbitron", "Dancing Script",
+    "Rokkitt", "Cuprum", "Amatic SC", "Bree Serif", "Play", "Vollkorn",
+    "Alegreya Sans", "Chakra Petch", "Gloria Hallelujah", "Righteous",
+    "News Cycle", "Russo One", "Alegreya", "Cookie", "Space Mono", "Patua One",
+    "Great Vibes", "Permanent Marker", "Satisfy", "Courgette", "Pathway Gothic One",
+    "Kaushan Script", "Fredoka One", "Luckiest Guy", "Didact Gothic", "Lobster"
+].sort();

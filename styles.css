@@ -573,6 +573,126 @@ body {
     margin: 1rem;
   }
 }
-.layer-row.mapping-row {
-  cursor: default;
+/* Custom Font Picker */
+.custom-select-wrapper {
+  position: relative;
+  user-select: none;
+  width: 100%;
+}
+
+.custom-select-trigger {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-color);
+  height: 36px;
+  line-height: 36px;
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.custom-select-trigger:hover {
+  border-color: var(--accent-color);
+}
+
+.custom-select-trigger .arrow {
+  font-size: 10px;
+  color: var(--muted-text);
+  transition: transform 0.2s;
+}
+
+.custom-select-wrapper.open .custom-select-trigger {
+  border-color: var(--accent-color);
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.custom-select-wrapper.open .arrow {
+  transform: rotate(180deg);
+}
+
+.custom-options {
+  position: absolute;
+  display: block;
+  top: 100%;
+  left: 0;
+  right: 0;
+  border: 1px solid var(--border-color);
+  border-top: 0;
+  background: var(--bg-color);
+  transition: all 0.2s;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: all;
+  z-index: 100;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.custom-options.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-10px);
+}
+
+.custom-options input[type="text"] {
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-size: 14px;
+  outline: none;
+}
+
+.custom-options input[type="text"]:focus {
+  background: var(--card-color);
+}
+
+#fontOptionsList {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+#fontOptionsList li {
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.1s;
+  font-size: 14px;
+  color: var(--text-color);
+}
+
+#fontOptionsList li:hover {
+  background-color: var(--accent-dim);
+}
+
+#fontOptionsList li.selected {
+  background-color: var(--accent-color);
+  color: var(--button-text);
+}
+
+/* Scrollbar for font list */
+#fontOptionsList::-webkit-scrollbar {
+  width: 6px;
+}
+#fontOptionsList::-webkit-scrollbar-track {
+  background: transparent;
+}
+#fontOptionsList::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
 }
