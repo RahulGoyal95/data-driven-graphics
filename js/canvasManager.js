@@ -30,7 +30,17 @@ export default class CanvasManager {
     this.stage.add(this.layer);
     this.transformer = new Konva.Transformer({
       rotateEnabled: false,
-      enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+      enabledAnchors: [
+        'top-left',
+        'top-center',
+        'top-right',
+        'middle-left',
+        'middle-right',
+        'bottom-left',
+        'bottom-center',
+        'bottom-right',
+      ],
+      keepRatio: false,
       boundBoxFunc: (oldBox, newBox) => {
         const minSize = 20;
         if (
@@ -467,9 +477,29 @@ export default class CanvasManager {
       }
       let line = '';
       words.forEach((word) => {
+        const wordWidth = ctx.measureText(word).width;
+        if (wordWidth > width) {
+          if (line) {
+            lineCount += 1;
+            line = '';
+          }
+          let chunk = '';
+          Array.from(word).forEach((char) => {
+            const testChunk = chunk + char;
+            if (ctx.measureText(testChunk).width > width && chunk) {
+              lineCount += 1;
+              chunk = char;
+            } else {
+              chunk = testChunk;
+            }
+          });
+          if (chunk) {
+            lineCount += 1;
+          }
+          return;
+        }
         const testLine = line ? `${line} ${word}` : word;
-        const metrics = ctx.measureText(testLine).width;
-        if (metrics > width && line) {
+        if (ctx.measureText(testLine).width > width && line) {
           lineCount += 1;
           line = word;
         } else {
