@@ -412,7 +412,7 @@ export default class CanvasManager {
     const minSize = 8;
     const fontFamily = meta.fontFamily || 'Inter';
     this.ensureFontLoaded(fontFamily);
-    let fontSize = Math.min(maxSize, textNode.fontSize() || maxSize);
+    let fontSize = maxSize;
     let measured = this.measureMultilineHeight(content, fontSize, width, fontFamily);
     while (measured > height && fontSize > minSize) {
       fontSize -= 1;
